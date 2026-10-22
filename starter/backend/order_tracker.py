@@ -65,8 +65,10 @@ class OrderTracker:
         required_methods = ['save_order', 'get_order', 'get_all_orders',
                             'delete_order']
         for method in required_methods:
-            if not hasattr(storage, method) or not callable(getattr(storage, method)):
-                raise TypeError(f"Storage object must implement a callable '{method}' method.")
+            if not callable(getattr(storage, method, None)):
+                raise TypeError(
+                    f"Storage object must implement a callable '{method}' "
+                    "method.")
         self.storage = storage
 
     def add_order(self, order_id: str, item_name: str, quantity: int,

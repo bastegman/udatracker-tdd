@@ -44,7 +44,8 @@ def test_add_order_raises_error_if_exists(order_tracker, mock_storage):
     # Simulate that the storage finds an existing order
     mock_storage.get_order.return_value = {"order_id": "ORD_EXISTING"}
 
-    with pytest.raises(ValueError, match="Order with ID 'ORD_EXISTING' already exists."):
+    with pytest.raises(ValueError,
+                       match="Order with ID 'ORD_EXISTING' already exists."):
         order_tracker.add_order("ORD_EXISTING", "New Item", 1, "CUST001")
 
 
@@ -119,8 +120,8 @@ def test_add_order_rejects_invalid_input(order_tracker, mock_storage,
     mock_storage.save_order.assert_not_called()
 
 
-def test_add_order_duplicate_raises_duplicate_order_error(order_tracker,
-                                                         mock_storage):
+def test_add_order_duplicate_raises_duplicate_order_error(
+        order_tracker, mock_storage):
     mock_storage.get_order.return_value = {"order_id": "ORD001"}
 
     with pytest.raises(DuplicateOrderError,
@@ -256,9 +257,11 @@ def test_list_orders_by_status_returns_only_matching(order_tracker,
                                                      mock_storage):
     mock_storage.get_all_orders.return_value = STORED_ORDERS
 
-    assert ids_of(order_tracker.list_orders_by_status("shipped")) == [
-        "A2", "A3"]
-    assert ids_of(order_tracker.list_orders_by_status("pending")) == ["A1"]
+    shipped = order_tracker.list_orders_by_status("shipped")
+    pending = order_tracker.list_orders_by_status("pending")
+
+    assert ids_of(shipped) == ["A2", "A3"]
+    assert ids_of(pending) == ["A1"]
 
 
 def test_list_orders_by_status_returns_empty_list_if_none_match(order_tracker,
