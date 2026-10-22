@@ -103,6 +103,10 @@ def get_order_api(order_id):
     return jsonify(order), 200
 
 
+# The starter (and test_api.py) use PUT .../<order_id>/status, while the
+# project rubric lists PUT /api/orders/<order_id>. Both URLs are served by
+# this one view, with the same body: {"new_status": "..."}.
+@app.route('/api/orders/<string:order_id>', methods=['PUT'])
 @app.route('/api/orders/<string:order_id>/status', methods=['PUT'])
 def update_order_status_api(order_id):
     data = _json_object()
