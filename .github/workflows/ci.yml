@@ -1,0 +1,77 @@
+# Checks every push to main and every pull request:
+# - "tests": the whole test suite, run from the repository root and from
+#   starter/, plus the PEP 8 check (flake8, configured in starter/.flake8);
+# - "docker": builds the image from starter/Dockerfile, starts a container
+#   and calls each API endpoint once.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests and PEP 8 (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.14"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: pip install -r starter/backend/requirements.txt flake8
+      - name: Run the tests from the repository root
+        run: pytest
+      - name: Run the tests from starter/
+        working-directory: starter
+        run: pytest
+      - name: Check PEP 8
+        working-directory: starter
+        run: flake8
+
+  docker:
+    name: Docker image and smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BASE: http://127.0.0.1:5000
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the image
+        run: docker build -t udatracker starter
+      - name: Start a container
+        run: docker run -d --name udatracker -p 5000:5000 udatracker
+      - name: Check the container runs unprivileged with debug off
+        run: |
+          test "$(docker exec udatracker id -u)" = 10001
+          test "$(docker exec udatracker printenv FLASK_DEBUG)" = 0
+      - name: Call each endpoint once
+        run: |
+          # Wait until the server answers.
+          curl -fsS --retry 20 --retry-all-errors --retry-delay 1 \
+            -o /dev/null "$BASE/api/orders"
+          curl -fsS -X POST "$BASE/api/orders" \
+            -H "Content-Type: application/json" \
+            -d '{"order_id": "ORD001", "item_name": "Laptop", "quantity": 1, "customer_id": "CUST001"}' \
+            | jq -e '.status == "pending"'
+          curl -fsS "$BASE/api/orders/ORD001" | jq -e '.item_name == "Laptop"'
+          curl -fsS -X PUT "$BASE/api/orders/ORD001/status" \
+            -H "Content-Type: application/json" -d '{"new_status": "shipped"}' \
+            | jq -e '.status == "shipped"'
+          curl -fsS "$BASE/api/orders?customer_id=CUST001&status=shipped" \
+            | jq -e 'length == 1'
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X DELETE "$BASE/api/orders/ORD001")" = 204
+          test "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/orders/ORD001")" = 404
+          curl -fsS -o /dev/null "$BASE/"
+          curl -fsS -o /dev/null "$BASE/js/script.js"
+      - name: Show the container logs
+        if: always()
+        run: docker logs udatracker
