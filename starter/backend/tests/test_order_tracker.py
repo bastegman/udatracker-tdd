@@ -310,3 +310,47 @@ def test_list_orders_combines_status_and_customer(order_tracker,
 def test_list_orders_rejects_invalid_filters(order_tracker, filters, field):
     with pytest.raises(ValueError, match=field):
         order_tracker.list_orders(**filters)
+
+
+# --- delete_order ---
+
+
+def test_delete_order_removes_and_returns_the_order(order_tracker,
+                                                    mock_storage):
+    stored = {**VALID_ORDER, "status": "pending"}
+    mock_storage.get_order.return_value = stored
+
+    assert order_tracker.delete_order("ORD001") == stored
+    mock_storage.delete_order.assert_called_once_with("ORD001")
+
+
+def test_delete_order_unknown_order_raises_not_found(order_tracker,
+                                                     mock_storage):
+    with pytest.raises(OrderNotFoundError,
+                       match="Order with ID 'UNKNOWN' not found."):
+        order_tracker.delete_order("UNKNOWN")
+
+    mock_storage.delete_order.assert_not_called()
+
+
+@pytest.mark.parametrize("order_id", ["", "   ", None],
+                         ids=["empty", "blank", "None"])
+def test_delete_order_rejects_empty_order_id(order_tracker, mock_storage,
+                                             order_id):
+    with pytest.raises(ValueError, match="order_id"):
+        order_tracker.delete_order(order_id)
+
+    mock_storage.delete_order.assert_not_called()
+
+
+# --- constructor ---
+
+STORAGE_METHODS = ("save_order", "get_order", "get_all_orders", "delete_order")
+
+
+@pytest.mark.parametrize("missing", STORAGE_METHODS)
+def test_constructor_rejects_storage_without_a_required_method(missing):
+    storage = Mock(spec=[name for name in STORAGE_METHODS if name != missing])
+
+    with pytest.raises(TypeError, match=missing):
+        OrderTracker(storage)
