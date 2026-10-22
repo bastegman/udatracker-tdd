@@ -98,7 +98,7 @@ class OrderTracker:
         self.storage.save_order(order_id, order)
         return order
 
-    def get_order_by_id(self, order_id: str):
+    def get_order_by_id(self, order_id: str) -> Optional[dict]:
         """Return the order with this ID, or None if there is none.
 
         This is a query, so a missing order is a normal answer (None), not
