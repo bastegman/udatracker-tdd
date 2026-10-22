@@ -1,11 +1,11 @@
 """Extra integration tests for the API, on top of the provided test_api.py.
 
 They cover the error contract ({"error": "..."} with 400, 404, 405, 409 and
-500), the customer filter, DELETE and the PUT alias.
+500), the customer filter, DELETE, the PUT alias and the run options.
 """
 import pytest
 
-from backend.app import app, in_memory_storage, order_tracker
+from backend.app import app, in_memory_storage, order_tracker, run_options
 
 NEW_ORDER = {"order_id": "X001", "item_name": "Desk", "quantity": 2,
              "customer_id": "C1"}
@@ -258,3 +258,27 @@ def test_put_alias_reports_errors_like_the_status_route(client):
     response = client.put("/api/orders/NOPE", json={"new_status": "shipped"})
 
     assert_json_error(response, 404, "Order with ID 'NOPE' not found.")
+
+
+# --- run options for `python -m backend.app` ---
+
+
+@pytest.mark.parametrize("environ, debug", [
+    pytest.param({}, True, id="unset: on, as in the starter"),
+    pytest.param({"FLASK_DEBUG": "1"}, True, id="1"),
+    pytest.param({"FLASK_DEBUG": "true"}, True, id="true"),
+    pytest.param({"FLASK_DEBUG": "0"}, False, id="0"),
+    pytest.param({"FLASK_DEBUG": "False"}, False, id="False"),
+    pytest.param({"FLASK_DEBUG": "no"}, False, id="no"),
+])
+def test_run_options_read_debug_from_flask_debug(environ, debug):
+    assert run_options(environ)["debug"] is debug
+
+
+def test_run_options_bind_all_interfaces_on_port_5000_by_default():
+    assert run_options({}) == {"host": "0.0.0.0", "port": 5000,
+                               "debug": True}
+
+
+def test_run_options_read_port_from_the_environment():
+    assert run_options({"PORT": "5050"})["port"] == 5050
