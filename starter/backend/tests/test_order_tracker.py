@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import Mock
-from ..order_tracker import VALID_STATUSES, DuplicateOrderError, OrderTracker
+from ..order_tracker import (VALID_STATUSES, DuplicateOrderError,
+                             OrderNotFoundError, OrderTracker)
 
 # --- Fixtures for Unit Tests ---
 
@@ -163,3 +164,63 @@ def test_get_order_by_id_rejects_invalid_id(order_tracker, mock_storage,
         order_tracker.get_order_by_id(order_id)
 
     mock_storage.get_order.assert_not_called()
+
+
+# --- update_order_status ---
+
+
+def test_update_order_status_changes_pending_to_shipped(order_tracker,
+                                                        mock_storage):
+    mock_storage.get_order.return_value = {**VALID_ORDER, "status": "pending"}
+
+    updated = order_tracker.update_order_status("ORD001", "shipped")
+
+    assert updated == {**VALID_ORDER, "status": "shipped"}
+    mock_storage.get_order.assert_called_once_with("ORD001")
+    mock_storage.save_order.assert_called_once_with(
+        "ORD001", {**VALID_ORDER, "status": "shipped"})
+
+
+def test_update_order_status_does_not_mutate_the_fetched_dict(order_tracker,
+                                                              mock_storage):
+    stored = {**VALID_ORDER, "status": "pending"}
+    mock_storage.get_order.return_value = stored
+
+    order_tracker.update_order_status("ORD001", "processing")
+
+    assert stored["status"] == "pending"
+
+
+def test_update_order_status_unknown_order_raises_not_found(order_tracker,
+                                                            mock_storage):
+    with pytest.raises(OrderNotFoundError,
+                       match="Order with ID 'UNKNOWN' not found."):
+        order_tracker.update_order_status("UNKNOWN", "shipped")
+
+    # A lookup failure, deliberately not a ValueError (the API maps it to 404).
+    assert issubclass(OrderNotFoundError, LookupError)
+    assert not issubclass(OrderNotFoundError, ValueError)
+    mock_storage.save_order.assert_not_called()
+
+
+@pytest.mark.parametrize("new_status", ["delivered", "SHIPPED", "", None],
+                         ids=["unknown", "wrong case", "empty", "None"])
+def test_update_order_status_rejects_invalid_status(order_tracker,
+                                                    mock_storage, new_status):
+    mock_storage.get_order.return_value = {**VALID_ORDER, "status": "pending"}
+
+    with pytest.raises(ValueError, match="new_status"):
+        order_tracker.update_order_status("ORD001", new_status)
+
+    mock_storage.save_order.assert_not_called()
+
+
+@pytest.mark.parametrize("order_id", ["", "   ", None],
+                         ids=["empty", "blank", "None"])
+def test_update_order_status_rejects_empty_order_id(order_tracker,
+                                                    mock_storage, order_id):
+    with pytest.raises(ValueError, match="order_id"):
+        order_tracker.update_order_status(order_id, "shipped")
+
+    mock_storage.get_order.assert_not_called()
+    mock_storage.save_order.assert_not_called()
