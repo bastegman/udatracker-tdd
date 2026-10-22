@@ -4,6 +4,7 @@ from ..order_tracker import OrderTracker
 
 # --- Fixtures for Unit Tests ---
 
+
 @pytest.fixture
 def mock_storage():
     """
@@ -17,6 +18,7 @@ def mock_storage():
     mock.get_all_orders.return_value = {}
     return mock
 
+
 @pytest.fixture
 def order_tracker(mock_storage):
     """
@@ -24,6 +26,13 @@ def order_tracker(mock_storage):
     """
     return OrderTracker(mock_storage)
 
-#
-# --- TODO: add test functions below this line ---
-#
+
+# --- add_order: example tests from the course README (cycles 1 and 2) ---
+
+
+def test_add_order_successfully(order_tracker, mock_storage):
+    """Tests adding a new order with default 'pending' status."""
+    order_tracker.add_order("ORD001", "Laptop", 1, "CUST001")
+
+    # We expect save_order to be called once
+    mock_storage.save_order.assert_called_once()
