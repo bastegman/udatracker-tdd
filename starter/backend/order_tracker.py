@@ -129,6 +129,22 @@ class OrderTracker:
         return [order for order in self.list_all_orders()
                 if order["status"] == status]
 
+    def list_orders(self, status: str = None, customer_id: str = None) -> list:
+        """Return the orders matching every filter that is given.
+
+        Both filters are optional and can be combined; None means "do not
+        filter on this field". Invalid filter values raise ValueError.
+        """
+        if status is not None:
+            _validate_status(status)
+        if customer_id is not None:
+            customer_id = _require_text(customer_id, "customer_id")
+        return [
+            order for order in self.storage.get_all_orders().values()
+            if (status is None or order["status"] == status)
+            and (customer_id is None or order["customer_id"] == customer_id)
+        ]
+
     def _get_existing_order(self, order_id: str) -> dict:
         order = self.storage.get_order(order_id)
         if order is None:
