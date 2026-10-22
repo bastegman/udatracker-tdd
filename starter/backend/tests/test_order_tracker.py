@@ -273,3 +273,40 @@ def test_list_orders_by_status_returns_empty_list_if_none_match(order_tracker,
 def test_list_orders_by_status_rejects_invalid_status(order_tracker, status):
     with pytest.raises(ValueError, match="status"):
         order_tracker.list_orders_by_status(status)
+
+
+# --- list_orders: combinable status and customer filters ---
+
+
+def test_list_orders_without_filters_returns_every_order(order_tracker,
+                                                         mock_storage):
+    mock_storage.get_all_orders.return_value = STORED_ORDERS
+
+    assert order_tracker.list_orders() == list(STORED_ORDERS.values())
+
+
+def test_list_orders_filters_by_customer(order_tracker, mock_storage):
+    mock_storage.get_all_orders.return_value = STORED_ORDERS
+
+    assert ids_of(order_tracker.list_orders(customer_id="C1")) == ["A1", "A3"]
+    assert ids_of(order_tracker.list_orders(customer_id=" C2 ")) == ["A2"]
+    assert order_tracker.list_orders(customer_id="C9") == []
+
+
+def test_list_orders_combines_status_and_customer(order_tracker,
+                                                  mock_storage):
+    mock_storage.get_all_orders.return_value = STORED_ORDERS
+
+    orders = order_tracker.list_orders(status="shipped", customer_id="C1")
+
+    assert ids_of(orders) == ["A3"]
+
+
+@pytest.mark.parametrize("filters, field", [
+    pytest.param({"status": "delivered"}, "status", id="unknown status"),
+    pytest.param({"customer_id": ""}, "customer_id", id="empty customer"),
+    pytest.param({"customer_id": "  "}, "customer_id", id="blank customer"),
+])
+def test_list_orders_rejects_invalid_filters(order_tracker, filters, field):
+    with pytest.raises(ValueError, match=field):
+        order_tracker.list_orders(**filters)
