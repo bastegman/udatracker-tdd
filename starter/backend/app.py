@@ -43,9 +43,12 @@ def handle_http_exception(error):
     unexpected 500) as JSON under /api/; other pages keep Flask's HTML."""
     if request.path != "/api" and not request.path.startswith("/api/"):
         return error
-    response = error.get_response()  # keeps the status and e.g. Allow
-    response.data = app.json.dumps({"error": error.description})
-    response.content_type = "application/json"
+    response = jsonify(error=error.description)
+    response.status_code = error.code
+    # Keep the headers Flask attaches to the error, such as Allow on a 405.
+    for name, value in error.get_headers():
+        if name.lower() != "content-type":
+            response.headers[name] = value
     return response
 
 
