@@ -62,7 +62,8 @@ class OrderTracker:
     and retrieve order information.
     """
     def __init__(self, storage):
-        required_methods = ['save_order', 'get_order', 'get_all_orders']
+        required_methods = ['save_order', 'get_order', 'get_all_orders',
+                            'delete_order']
         for method in required_methods:
             if not hasattr(storage, method) or not callable(getattr(storage, method)):
                 raise TypeError(f"Storage object must implement a callable '{method}' method.")
@@ -148,6 +149,17 @@ class OrderTracker:
             if (status is None or order["status"] == status)
             and (customer_id is None or order["customer_id"] == customer_id)
         ]
+
+    def delete_order(self, order_id: str) -> dict:
+        """Delete an existing order and return what was deleted.
+
+        Like update_order_status this is a command: an unknown ID raises
+        OrderNotFoundError and an invalid ID raises ValueError.
+        """
+        order_id = _require_text(order_id, "order_id")
+        order = self._get_existing_order(order_id)
+        self.storage.delete_order(order_id)
+        return order
 
     def _get_existing_order(self, order_id: str) -> dict:
         order = self.storage.get_order(order_id)
