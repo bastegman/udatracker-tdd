@@ -1,0 +1,10 @@
+# flake8 settings for the backend. Run `uvx flake8` from this directory.
+[flake8]
+# backend/tests/test_api.py is the integration suite provided by the course
+# and must stay byte-for-byte unchanged, so it is excluded instead of being
+# reformatted. Local virtual environments are skipped too. Everything else
+# follows PEP 8 with flake8's default 79-character limit.
+extend-exclude =
+    backend/tests/test_api.py,
+    venv,
+    .venv
