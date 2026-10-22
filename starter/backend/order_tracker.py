@@ -83,7 +83,13 @@ class OrderTracker:
         return order
 
     def get_order_by_id(self, order_id: str):
-        pass
+        """Return the order with this ID, or None if there is none.
+
+        This is a query, so a missing order is a normal answer (None), not
+        an error. An empty or non-string ID raises ValueError.
+        """
+        order_id = _require_text(order_id, "order_id")
+        return self.storage.get_order(order_id)
 
     def update_order_status(self, order_id: str, new_status: str):
         pass
