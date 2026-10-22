@@ -115,11 +115,19 @@ class OrderTracker:
         self.storage.save_order(order_id, updated)
         return updated
 
-    def list_all_orders(self):
-        pass
+    def list_all_orders(self) -> list:
+        """Return every order as a list (empty if there are none)."""
+        return list(self.storage.get_all_orders().values())
 
-    def list_orders_by_status(self, status: str):
-        pass
+    def list_orders_by_status(self, status: str) -> list:
+        """Return the orders with the given status.
+
+        An unknown status raises ValueError instead of silently matching
+        nothing, so a typo such as 'shiped' is reported to the caller.
+        """
+        _validate_status(status)
+        return [order for order in self.list_all_orders()
+                if order["status"] == status]
 
     def _get_existing_order(self, order_id: str) -> dict:
         order = self.storage.get_order(order_id)
