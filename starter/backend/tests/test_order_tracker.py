@@ -36,3 +36,12 @@ def test_add_order_successfully(order_tracker, mock_storage):
 
     # We expect save_order to be called once
     mock_storage.save_order.assert_called_once()
+
+
+def test_add_order_raises_error_if_exists(order_tracker, mock_storage):
+    """Tests that adding an order with a duplicate ID raises a ValueError."""
+    # Simulate that the storage finds an existing order
+    mock_storage.get_order.return_value = {"order_id": "ORD_EXISTING"}
+
+    with pytest.raises(ValueError, match="Order with ID 'ORD_EXISTING' already exists."):
+        order_tracker.add_order("ORD_EXISTING", "New Item", 1, "CUST001")
