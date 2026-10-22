@@ -111,6 +111,12 @@ def update_order_status_api(order_id):
     return jsonify(order), 200
 
 
+@app.route('/api/orders/<string:order_id>', methods=['DELETE'])
+def delete_order_api(order_id):
+    order_tracker.delete_order(order_id)
+    return "", 204
+
+
 @app.route('/api/orders', methods=['GET'])
 def list_orders_api():
     # Both query parameters are optional; OrderTracker combines them.
