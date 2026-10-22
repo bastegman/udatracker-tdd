@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import Mock
-from ..order_tracker import OrderTracker
+from ..order_tracker import VALID_STATUSES, DuplicateOrderError, OrderTracker
 
 # --- Fixtures for Unit Tests ---
 
@@ -45,3 +45,87 @@ def test_add_order_raises_error_if_exists(order_tracker, mock_storage):
 
     with pytest.raises(ValueError, match="Order with ID 'ORD_EXISTING' already exists."):
         order_tracker.add_order("ORD_EXISTING", "New Item", 1, "CUST001")
+
+
+# --- add_order: stored details, defaults and validation ---
+
+VALID_ORDER = {
+    "order_id": "ORD001",
+    "item_name": "Laptop",
+    "quantity": 2,
+    "customer_id": "CUST001",
+}
+
+
+def test_add_order_stores_details_with_pending_default(order_tracker,
+                                                       mock_storage):
+    order_tracker.add_order("ORD001", "Laptop", 2, "CUST001")
+
+    mock_storage.save_order.assert_called_once_with("ORD001", {
+        "order_id": "ORD001",
+        "item_name": "Laptop",
+        "quantity": 2,
+        "customer_id": "CUST001",
+        "status": "pending",
+    })
+
+
+def test_add_order_returns_the_new_order(order_tracker):
+    order = order_tracker.add_order(**VALID_ORDER)
+
+    assert order == {**VALID_ORDER, "status": "pending"}
+
+
+@pytest.mark.parametrize("status", VALID_STATUSES)
+def test_add_order_accepts_every_valid_status(order_tracker, mock_storage,
+                                              status):
+    order = order_tracker.add_order(**VALID_ORDER, status=status)
+
+    assert order["status"] == status
+    mock_storage.save_order.assert_called_once()
+
+
+def test_add_order_strips_surrounding_whitespace(order_tracker, mock_storage):
+    order = order_tracker.add_order(" ORD001 ", " Laptop ", 2, " CUST001 ")
+
+    assert order == {**VALID_ORDER, "status": "pending"}
+    mock_storage.get_order.assert_called_once_with("ORD001")
+
+
+@pytest.mark.parametrize("field, value", [
+    pytest.param("order_id", "", id="empty order_id"),
+    pytest.param("order_id", "   ", id="blank order_id"),
+    pytest.param("order_id", None, id="missing order_id"),
+    pytest.param("order_id", 123, id="non-string order_id"),
+    pytest.param("item_name", "", id="empty item_name"),
+    pytest.param("customer_id", "", id="empty customer_id"),
+    pytest.param("customer_id", None, id="missing customer_id"),
+    pytest.param("quantity", 0, id="zero quantity"),
+    pytest.param("quantity", -3, id="negative quantity"),
+    pytest.param("quantity", 1.5, id="float quantity"),
+    pytest.param("quantity", "2", id="string quantity"),
+    pytest.param("quantity", True, id="bool quantity"),
+    pytest.param("quantity", None, id="missing quantity"),
+    pytest.param("status", "delivered", id="unknown status"),
+    pytest.param("status", "Shipped", id="status in wrong case"),
+    pytest.param("status", "", id="empty status"),
+])
+def test_add_order_rejects_invalid_input(order_tracker, mock_storage,
+                                         field, value):
+    with pytest.raises(ValueError, match=field):
+        order_tracker.add_order(**{**VALID_ORDER, field: value})
+
+    mock_storage.save_order.assert_not_called()
+
+
+def test_add_order_duplicate_raises_duplicate_order_error(order_tracker,
+                                                         mock_storage):
+    mock_storage.get_order.return_value = {"order_id": "ORD001"}
+
+    with pytest.raises(DuplicateOrderError,
+                       match="Order with ID 'ORD001' already exists."):
+        order_tracker.add_order(**VALID_ORDER)
+
+    # Still a ValueError, so callers that only expect validation errors work.
+    assert issubclass(DuplicateOrderError, ValueError)
+    mock_storage.save_order.assert_not_called()
