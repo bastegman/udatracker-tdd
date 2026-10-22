@@ -224,3 +224,52 @@ def test_update_order_status_rejects_empty_order_id(order_tracker,
 
     mock_storage.get_order.assert_not_called()
     mock_storage.save_order.assert_not_called()
+
+
+# --- list_all_orders and list_orders_by_status ---
+
+STORED_ORDERS = {
+    "A1": {"order_id": "A1", "item_name": "Pen", "quantity": 1,
+           "customer_id": "C1", "status": "pending"},
+    "A2": {"order_id": "A2", "item_name": "Ink", "quantity": 2,
+           "customer_id": "C2", "status": "shipped"},
+    "A3": {"order_id": "A3", "item_name": "Pad", "quantity": 3,
+           "customer_id": "C1", "status": "shipped"},
+}
+
+
+def ids_of(orders):
+    return [order["order_id"] for order in orders]
+
+
+def test_list_all_orders_returns_every_order(order_tracker, mock_storage):
+    mock_storage.get_all_orders.return_value = STORED_ORDERS
+
+    assert order_tracker.list_all_orders() == list(STORED_ORDERS.values())
+
+
+def test_list_all_orders_returns_empty_list_without_orders(order_tracker):
+    assert order_tracker.list_all_orders() == []
+
+
+def test_list_orders_by_status_returns_only_matching(order_tracker,
+                                                     mock_storage):
+    mock_storage.get_all_orders.return_value = STORED_ORDERS
+
+    assert ids_of(order_tracker.list_orders_by_status("shipped")) == [
+        "A2", "A3"]
+    assert ids_of(order_tracker.list_orders_by_status("pending")) == ["A1"]
+
+
+def test_list_orders_by_status_returns_empty_list_if_none_match(order_tracker,
+                                                                mock_storage):
+    mock_storage.get_all_orders.return_value = STORED_ORDERS
+
+    assert order_tracker.list_orders_by_status("processing") == []
+
+
+@pytest.mark.parametrize("status", ["delivered", "", None],
+                         ids=["unknown", "empty", "None"])
+def test_list_orders_by_status_rejects_invalid_status(order_tracker, status):
+    with pytest.raises(ValueError, match="status"):
+        order_tracker.list_orders_by_status(status)
