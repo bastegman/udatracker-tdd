@@ -236,3 +236,25 @@ def test_delete_twice_returns_404_the_second_time(client):
     client.delete("/api/orders/X001")
 
     assert_json_error(client.delete("/api/orders/X001"), 404)
+
+
+# --- PUT: /api/orders/<id>/status (starter, test_api.py) and /api/orders/<id>
+# (rubric) are the same operation ---
+
+
+@pytest.mark.parametrize("url", ["/api/orders/X001/status",
+                                 "/api/orders/X001"])
+def test_update_status_works_on_both_put_routes(client, url):
+    post_order(client)
+
+    response = client.put(url, json={"new_status": "processing"})
+
+    assert response.status_code == 200
+    assert response.get_json() == {**NEW_ORDER, "status": "processing"}
+    assert client.get("/api/orders/X001").get_json()["status"] == "processing"
+
+
+def test_put_alias_reports_errors_like_the_status_route(client):
+    response = client.put("/api/orders/NOPE", json={"new_status": "shipped"})
+
+    assert_json_error(response, 404, "Order with ID 'NOPE' not found.")
