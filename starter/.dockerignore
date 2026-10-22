@@ -1,0 +1,11 @@
+# Keep the build context to what the image needs.
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+venv
+.venv
+backend/tests
+.flake8
+Dockerfile
+.dockerignore
+README.md
