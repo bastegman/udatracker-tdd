@@ -129,3 +129,37 @@ def test_add_order_duplicate_raises_duplicate_order_error(order_tracker,
     # Still a ValueError, so callers that only expect validation errors work.
     assert issubclass(DuplicateOrderError, ValueError)
     mock_storage.save_order.assert_not_called()
+
+
+# --- get_order_by_id ---
+
+
+def test_get_order_by_id_returns_existing_order(order_tracker, mock_storage):
+    stored = {**VALID_ORDER, "status": "pending"}
+    mock_storage.get_order.return_value = stored
+
+    assert order_tracker.get_order_by_id("ORD001") == stored
+    mock_storage.get_order.assert_called_once_with("ORD001")
+
+
+def test_get_order_by_id_returns_none_for_unknown_id(order_tracker,
+                                                     mock_storage):
+    assert order_tracker.get_order_by_id("UNKNOWN") is None
+    mock_storage.get_order.assert_called_once_with("UNKNOWN")
+
+
+def test_get_order_by_id_strips_surrounding_whitespace(order_tracker,
+                                                       mock_storage):
+    order_tracker.get_order_by_id("  ORD001 ")
+
+    mock_storage.get_order.assert_called_once_with("ORD001")
+
+
+@pytest.mark.parametrize("order_id", ["", "   ", None, 42],
+                         ids=["empty", "blank", "None", "int"])
+def test_get_order_by_id_rejects_invalid_id(order_tracker, mock_storage,
+                                            order_id):
+    with pytest.raises(ValueError, match="order_id"):
+        order_tracker.get_order_by_id(order_id)
+
+    mock_storage.get_order.assert_not_called()
