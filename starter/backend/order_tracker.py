@@ -6,6 +6,7 @@
 # callers such as the Flask API can map them to HTTP responses:
 #   ValueError          -> invalid input (blank ID, bad quantity or status)
 #   DuplicateOrderError -> an order with that ID already exists
+#   OrderNotFoundError  -> a command targets an order that does not exist
 
 # Allowed order statuses. They match the options offered by the frontend.
 VALID_STATUSES = ("pending", "processing", "shipped")
@@ -18,6 +19,15 @@ class DuplicateOrderError(ValueError):
     (the course's example test, for instance) still catches it, while the
     API can tell it apart and answer 409 Conflict.
     """
+
+
+class OrderNotFoundError(LookupError):
+    """Raised when a command (such as a status update) targets an unknown
+    order ID. Deliberately not a ValueError: the input was well formed."""
+
+    def __init__(self, order_id: str):
+        super().__init__(f"Order with ID '{order_id}' not found.")
+        self.order_id = order_id
 
 
 def _require_text(value, field: str) -> str:
@@ -36,11 +46,12 @@ def _validate_quantity(quantity) -> None:
             f"'quantity' must be a positive integer, got {quantity!r}.")
 
 
-def _validate_status(status) -> None:
+def _validate_status(status, field: str = "status") -> None:
+    # A tuple membership test also copes with unhashable JSON values.
     if status not in VALID_STATUSES:
         raise ValueError(
-            f"Invalid status {status!r}; 'status' must be one of: "
-            f"{', '.join(VALID_STATUSES)}.")
+            f"'{field}' must be one of: {', '.join(VALID_STATUSES)}; "
+            f"got {status!r}.")
 
 
 class OrderTracker:
@@ -91,11 +102,27 @@ class OrderTracker:
         order_id = _require_text(order_id, "order_id")
         return self.storage.get_order(order_id)
 
-    def update_order_status(self, order_id: str, new_status: str):
-        pass
+    def update_order_status(self, order_id: str, new_status: str) -> dict:
+        """Change the status of an existing order and return the result.
+
+        This is a command, so an unknown ID is an error and raises
+        OrderNotFoundError. Invalid input raises ValueError.
+        """
+        order_id = _require_text(order_id, "order_id")
+        _validate_status(new_status, "new_status")
+        # Save a new dict rather than mutating whatever storage returned.
+        updated = {**self._get_existing_order(order_id), "status": new_status}
+        self.storage.save_order(order_id, updated)
+        return updated
 
     def list_all_orders(self):
         pass
 
     def list_orders_by_status(self, status: str):
         pass
+
+    def _get_existing_order(self, order_id: str) -> dict:
+        order = self.storage.get_order(order_id)
+        if order is None:
+            raise OrderNotFoundError(order_id)
+        return order
