@@ -1,5 +1,7 @@
 # Udatracker with Test-Driven Development (TDD)
 
+> **Submission by Bernardo Stegmaier.** The finished project's setup, API reference, design notes and reflection are in [`starter/README.md`](starter/README.md). The course instructions below are unchanged.
+
 Welcome to the Udatracker project! This guide will walk you through implementing the backend logic and API for your project using a strict **Test-Driven Development (TDD)** workflow.
 
 Your goal is to use the provided test suites to drive your implementation. You'll follow the classic **Red → Green → Refactor** cycle: run a test to see it fail, write the code to make it pass, and then move on to the next feature.

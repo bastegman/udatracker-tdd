@@ -1,4 +1,6 @@
-# Udatracker Starter Code
+# Udatracker
+
+**Author:** Bernardo Stegmaier
 
 This directory contains the Udatracker order tracker: a Flask backend built test-first (red → green → refactor) and the small frontend that ships with the starter. The git history shows the cycles: each `test: … (red)` commit is followed by the `feat: … (green)` commit that makes it pass, plus the occasional `refactor:`.
 
@@ -45,6 +47,7 @@ pytest                                # all tests; also works from the repositor
 - Debug mode is on by default, as in the starter. `FLASK_DEBUG=0 python -m backend.app` turns it off.
 - `PORT` changes the port. On macOS, AirPlay Receiver often holds port 5000, so use `PORT=5001 python -m backend.app`.
 - Style check (PEP 8): `uvx flake8`, or `pip install flake8 && flake8`. The `.flake8` file excludes only the provided `test_api.py`, which must stay unmodified.
+- On every push, GitHub Actions (`.github/workflows/ci.yml` at the repository root) runs the tests on Python 3.12 and 3.14 and flake8, then builds the Docker image and calls each endpoint in a running container.
 
 ## API reference
 
@@ -131,3 +134,5 @@ Then open http://127.0.0.1:5000/. The image is based on `python:3.12-slim`, runs
 - **Design trade-off:** I separated commands from queries. `get_order_by_id` returns `None` for an unknown ID, while `update_order_status` and `delete_order` raise `OrderNotFoundError`. Exceptions are mapped to status codes in one place, which keeps the views thin. `DuplicateOrderError` subclasses `ValueError` so the course test still passes while the API returns 409.
 - **Testing insight:** when I made `list_orders_by_status` delegate to the new `list_orders`, `test_list_orders_by_status_rejects_invalid_status[None]` failed. `list_orders` treats `None` as "no filter", so `None` would have returned every order. So I kept the status check before delegating.
 - **Next step:** the duplicate check is check-then-save, so two simultaneous POSTs on the threaded dev server could both succeed. An atomic `save_if_absent` in storage, or a database unique constraint, would close that race.
+
+— Bernardo Stegmaier, October 2026
