@@ -62,6 +62,8 @@ def test_add_order_missing_fields_returns_400_naming_them(client):
     pytest.param({"quantity": "2"}, "quantity", id="string quantity"),
     pytest.param({"order_id": "  "}, "order_id", id="blank order_id"),
     pytest.param({"order_id": "A/B"}, "order_id", id="slash in order_id"),
+    pytest.param({"order_id": "."}, "order_id", id="dot order_id"),
+    pytest.param({"order_id": " .. "}, "order_id", id="dot-dot order_id"),
     pytest.param({"status": "delivered"}, "status", id="unknown status"),
 ])
 def test_add_order_invalid_values_return_400(client, overrides, fragment):
