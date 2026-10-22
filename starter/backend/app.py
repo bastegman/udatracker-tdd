@@ -86,10 +86,12 @@ def add_order_api():
     data = _json_object()
     _require_fields(data, REQUIRED_ORDER_FIELDS)
     order_id = data["order_id"]
-    if isinstance(order_id, str) and "/" in order_id:
-        # The ID becomes one URL path segment, so '/' would make the order
+    if isinstance(order_id, str) and ("/" in order_id
+                                      or order_id.strip() in (".", "..")):
+        # The ID becomes one URL path segment: '/' would split it, and
+        # browsers and curl collapse '.' and '..', so the order would be
         # unreachable through GET/PUT /api/orders/<order_id>.
-        raise ValueError("'order_id' must not contain '/'.")
+        raise ValueError("'order_id' must not contain '/' or be '.' or '..'.")
 
     fields = {field: data[field] for field in REQUIRED_ORDER_FIELDS}
     if "status" in data:  # otherwise OrderTracker applies its default
