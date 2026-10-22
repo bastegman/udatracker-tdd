@@ -23,14 +23,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         orders.forEach(order => {
             const row = document.createElement('tr');
-            row.innerHTML = `<td class="p-2">${order.order_id}</td><td class="p-2">${order.item_name}</td><td class="p-2">${order.quantity}</td><td class="p-2">${order.customer_id}</td><td class="p-2 capitalize">${order.status}</td>`;
+            // Build cells with textContent, never innerHTML: the values are user
+            // input, and interpolating them into HTML allowed stored XSS.
+            const values = [order.order_id, order.item_name, order.quantity, order.customer_id, order.status];
+            values.forEach((value, index) => {
+                const cell = document.createElement('td');
+                cell.className = index === values.length - 1 ? 'p-2 capitalize' : 'p-2';
+                cell.textContent = value;
+                row.appendChild(cell);
+            });
             ordersTableBody.appendChild(row);
         });
     }
 
     async function fetchAndRenderOrders(status = '') {
         try {
-            const url = status ? `/api/orders?status=${status}` : '/api/orders';
+            const url = status ? `/api/orders?status=${encodeURIComponent(status)}` : '/api/orders';
             const response = await fetch(url);
             const orders = await response.json();
             if (!response.ok) throw new Error(orders.error || 'Unknown error');
@@ -59,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
         singleOrderDetails.classList.add('hidden');
         if (!orderId) { showMessage('Please enter an Order ID.', 'error'); return; }
         try {
-            const response = await fetch(`/api/orders/${orderId}`);
+            const response = await fetch(`/api/orders/${encodeURIComponent(orderId)}`);
             const order = await response.json();
             if (!response.ok) throw new Error(order.error);
             singleOrderDetails.querySelector('pre').textContent = JSON.stringify(order, null, 2);
@@ -73,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const newStatus = document.getElementById('update-new-status').value;
         if (!orderId || !newStatus) { showMessage('Please enter an Order ID and select a new status.', 'error'); return; }
         try {
-            const response = await fetch(`/api/orders/${orderId}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ new_status: newStatus }) });
+            const response = await fetch(`/api/orders/${encodeURIComponent(orderId)}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ new_status: newStatus }) });
             const result = await response.json();
             if (!response.ok) throw new Error(result.error);
             showMessage(`Order ${orderId} status updated.`, 'success');
