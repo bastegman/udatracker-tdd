@@ -178,3 +178,34 @@ def test_unexpected_error_returns_500_json_without_details(client,
 
     assert_json_error(response, 500)
     assert "exploded" not in response.get_json()["error"]
+
+
+# --- GET /api/orders?customer_id=... ---
+
+
+@pytest.fixture
+def three_orders(client):
+    post_order(client, order_id="A1", customer_id="C1")
+    post_order(client, order_id="A2", customer_id="C2", status="shipped")
+    post_order(client, order_id="A3", customer_id="C1", status="shipped")
+
+
+def ids_in(response):
+    assert response.status_code == 200
+    return [order["order_id"] for order in response.get_json()]
+
+
+def test_list_orders_filters_by_customer(client, three_orders):
+    assert ids_in(client.get("/api/orders?customer_id=C1")) == ["A1", "A3"]
+    assert ids_in(client.get("/api/orders?customer_id=C9")) == []
+
+
+def test_list_orders_combines_customer_and_status(client, three_orders):
+    response = client.get("/api/orders?customer_id=C1&status=shipped")
+
+    assert ids_in(response) == ["A3"]
+
+
+def test_list_orders_with_blank_customer_returns_400(client):
+    assert_json_error(client.get("/api/orders?customer_id="), 400,
+                      "customer_id")
