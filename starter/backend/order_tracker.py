@@ -8,6 +8,8 @@
 #   DuplicateOrderError -> an order with that ID already exists
 #   OrderNotFoundError  -> a command targets an order that does not exist
 
+from typing import Optional
+
 # Allowed order statuses. They match the options offered by the frontend.
 VALID_STATUSES = ("pending", "processing", "shipped")
 
@@ -117,7 +119,7 @@ class OrderTracker:
 
     def list_all_orders(self) -> list:
         """Return every order as a list (empty if there are none)."""
-        return list(self.storage.get_all_orders().values())
+        return self.list_orders()
 
     def list_orders_by_status(self, status: str) -> list:
         """Return the orders with the given status.
@@ -125,11 +127,13 @@ class OrderTracker:
         An unknown status raises ValueError instead of silently matching
         nothing, so a typo such as 'shiped' is reported to the caller.
         """
+        # Validate here as well: list_orders reads None as "no filter", but
+        # this method requires a status, so None must not return everything.
         _validate_status(status)
-        return [order for order in self.list_all_orders()
-                if order["status"] == status]
+        return self.list_orders(status=status)
 
-    def list_orders(self, status: str = None, customer_id: str = None) -> list:
+    def list_orders(self, status: Optional[str] = None,
+                    customer_id: Optional[str] = None) -> list:
         """Return the orders matching every filter that is given.
 
         Both filters are optional and can be combined; None means "do not
