@@ -113,7 +113,11 @@ def update_order_status_api(order_id):
 
 @app.route('/api/orders', methods=['GET'])
 def list_orders_api():
-    orders = order_tracker.list_orders(status=request.args.get("status"))
+    # Both query parameters are optional; OrderTracker combines them.
+    orders = order_tracker.list_orders(
+        status=request.args.get("status"),
+        customer_id=request.args.get("customer_id"),
+    )
     return jsonify(orders), 200
 
 
