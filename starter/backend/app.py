@@ -2,6 +2,8 @@
 # results or exceptions into HTTP responses; the business rules live in
 # OrderTracker (backend/order_tracker.py).
 
+import os
+
 from flask import Flask, request, jsonify, send_from_directory, url_for
 from werkzeug.exceptions import HTTPException
 
@@ -131,5 +133,20 @@ def list_orders_api():
     return jsonify(orders), 200
 
 
+def run_options(environ=os.environ) -> dict:
+    """Options for app.run(), read from environment variables.
+
+    FLASK_DEBUG: debug stays on by default, as in the starter; "0", "false"
+    or "no" turn it off (the Dockerfile sets FLASK_DEBUG=0).
+    PORT: defaults to 5000 (on macOS, AirPlay Receiver often holds 5000).
+    """
+    debug = environ.get("FLASK_DEBUG", "1").strip().lower()
+    return {
+        "host": "0.0.0.0",
+        "port": int(environ.get("PORT", "5000")),
+        "debug": debug not in ("", "0", "false", "no"),
+    }
+
+
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", debug=True)
+    app.run(**run_options())
