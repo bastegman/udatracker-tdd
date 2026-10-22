@@ -18,5 +18,10 @@ class InMemoryStorage:
     def get_all_orders(self):
         return {k: v.copy() for k, v in self._orders.items()}
 
+    def delete_order(self, order_id: str):
+        # Unknown IDs are ignored: whether that is an error is decided by
+        # OrderTracker, not by the storage layer.
+        self._orders.pop(order_id, None)
+
     def clear(self):
         self._orders = {}
