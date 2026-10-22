@@ -209,3 +209,30 @@ def test_list_orders_combines_customer_and_status(client, three_orders):
 def test_list_orders_with_blank_customer_returns_400(client):
     assert_json_error(client.get("/api/orders?customer_id="), 400,
                       "customer_id")
+
+
+# --- DELETE /api/orders/<order_id> ---
+
+
+def test_delete_order_returns_204_and_removes_it(client):
+    post_order(client)
+
+    response = client.delete("/api/orders/X001")
+
+    assert response.status_code == 204
+    assert response.data == b""
+    assert client.get("/api/orders/X001").status_code == 404
+    assert client.get("/api/orders").get_json() == []
+
+
+def test_delete_unknown_order_returns_404(client):
+    response = client.delete("/api/orders/NOPE")
+
+    assert_json_error(response, 404, "Order with ID 'NOPE' not found.")
+
+
+def test_delete_twice_returns_404_the_second_time(client):
+    post_order(client)
+    client.delete("/api/orders/X001")
+
+    assert_json_error(client.delete("/api/orders/X001"), 404)
